@@ -1,5 +1,6 @@
 'use strict';
 
+
 var Call = function (appController) {
     console.log("new Call!");
 
@@ -81,23 +82,13 @@ Call.prototype.gotDisplayMediaStream = function(streams) {
     return true;
 }
 
-Call.prototype.addPeerConnection = async function (isCaller, me, peer) {
-    var connectionName = `pc_${me}-${peer}`;
-
-    /*if (this.pc_.findIndex(pc => pc.pcName === connectionName) != -1 ) {
-        console.log(`connection of ${connectionName} is already exists`);
-        return;
-    }*/
-
+Call.prototype.addPeerConnection = async function (me, peer) {
     var pcIndex = this.connectionCnt++;
-    if (isCaller) {
-        this.pc_[pcIndex] = new Connection(me, peer, this);
-    } else {
-        this.pc_[pcIndex] = new Connection(peer, me, this);
-    }
-    this.pc_[pcIndex].initConnection(connectionName);
 
-    await this.pc_[pcIndex].startConnection(isCaller, me);
+    this.pc_[pcIndex] = new Connection(me, peer, this);
+    await this.pc_[pcIndex].initConnection();
+
+    await this.pc_[pcIndex].startConnection(me);
 }
 
 Call.prototype.hangup = function() {

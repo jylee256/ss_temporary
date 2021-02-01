@@ -1,16 +1,25 @@
 'use strict';
 
-var Connection = function (peerA, peerB, call) {
-    console.log("new Connection, caller: ", peerA, " callee: ", peerB);
-    
-    this.remoteVideo = document.querySelector('#remotevideo');
 
+var Connection = function (me, peer, call) {   
     this.call_ = call;
     this.roomRef = this.call_.appController_.roomRef;
-    this.caller = peerA;
-    this.callee = peerB;
+
+    var compare = me.localeCompare(peer);
+    if (compare == 0) {
+        console.log('peers have same name....');
+        return;
+    }
+    this.caller = (compare == 1) ? me : peer;
+    this.callee = (compare == 1) ? peer : me;
+    this.pcName = `pc_${this.caller}-${this.callee}`;
+    this.isCaller = (me == this.caller) ? true : false;
+
+    console.log(`New connection name is ${this.pcName} (caller: ${this.caller}, callee: ${this.callee})`);
+
     this.localStream = call.localStream;
     this.remoteStream = new MediaStream();
+    this.addRemoteStream(this.call_.connectionCnt);
 
     this.configuration = {
         iceServers: [
@@ -41,10 +50,11 @@ var Connection = function (peerA, peerB, call) {
     
 }
 
-Connection.prototype.initDB = function (pcName) {
+Connection.prototype.initDB = async function (pcName) {
     this.pcCollection = this.roomRef.collection(pcName);
     this.pcCollectionRef = this.pcCollection.doc(pcName);
-    this.pcCollectionRef.set({ caller: this.caller, callee: this.callee });
+    await this.pcCollectionRef.set({ caller: this.caller, callee: this.callee });
+    //console.log("initDB " + this.pcName + "set: caller-" + this.caller + " callee-"+this.callee)
 
     this.callerCandidatesCollection = this.pcCollectionRef.collection('callerCandidates');
     this.calleeCandidatesCollection = this.pcCollectionRef.collection('calleeCandidates');
@@ -58,9 +68,8 @@ Connection.prototype.addCandidateDB = function (isCaller, candidate) {
     }
 }
 
-Connection.prototype.initConnection = function(pcName) {
-    this.pcName = pcName;
-    this.initDB(pcName);
+Connection.prototype.initConnection = async function() {
+    await this.initDB(this.pcName);
     
     this.peerConnection = new RTCPeerConnection(this.configuration);
     this.registerPeerConnectionListeners();
@@ -77,7 +86,7 @@ Connection.prototype.initConnection = function(pcName) {
             return;
         }
         console.log('Got candidate: ', event.candidate);
-        this.addCandidateDB(isCaller, event.candidate.toJSON());
+        this.addCandidateDB(this.isCaller, event.candidate.toJSON());
     });
 
     /* this is triggered at its setRemoteDescription */
@@ -91,18 +100,23 @@ Connection.prototype.initConnection = function(pcName) {
     });
 }
 
+Connection.prototype.addRemoteStream = function(index) {
+    const videosDiv = document.querySelector('#videos-div');
+    var video = document.createElement('video');
+
+    video.id = `remotevideo${index}`;
+    video.autoplay = true;
+    video.playsInline = true;
+
+    videosDiv.appendChild(video);
+
+    this.remoteVideo = video;
+}
+
 Connection.prototype.startOffer = async function() {
     /* create Offer */
-    const roomWithOffer = await setLocalDescription(true);
+    const roomWithOffer = await this.setLocalDescription(true);
     await this.pcCollectionRef.update(roomWithOffer);
-
-    this.roomId = this.roomRef.id;
-
-    /* it is triggered at peer create answer */
-    this.pcCollectionRef.onSnapshot(async snapshot => {
-        const data = snapshot.data();
-        await this.setRemoteDescription(true, data);
-    });
 
     /* it is trigger at peer(callee) added in DB */
     this.calleeCandidatesCollection.onSnapshot(snapshot => {
@@ -116,15 +130,11 @@ Connection.prototype.startOffer = async function() {
 }
 
 Connection.prototype.startAnswer = async function() {
-    const pcCollectionSnapshot = await this.pcCollectionRef.get();
-    const data = pcCollectionSnapshot.data();
-    console.log('Got offer:', data.offer);
-    await this.setRemoteDescription(false, data);
-
+    /* create Answer */
     const roomWithAnswer = await this.setLocalDescription(false);
     await this.pcCollectionRef.update(roomWithAnswer);
     
-    /* it is trigger at peer(callee) added in DB */
+    /* it is trigger at peer(caller) added in DB */
     this.callerCandidatesCollection.onSnapshot(snapshot => {
         snapshot.docChanges().forEach(async change => {
             if (change.type === 'added') {
@@ -137,14 +147,20 @@ Connection.prototype.startAnswer = async function() {
 }
 
 Connection.prototype.startConnection = async function (me) {
+    //console.log("startConnection " + this.pcName + " await...");
     const pcCollectionSnapshot = await this.pcCollectionRef.get();
-    //const caller = pcCollectionSnapshot.data().caller;
-    //const callee = pcCollectionSnapshot.data().callee;
-    
+    const caller = pcCollectionSnapshot.data().caller;
+    const callee = pcCollectionSnapshot.data().callee;
+    console.log("startConnection " + this.pcName + " caller: " + caller + " callee: " + callee);
+
+    /* it is trigger at createAnswer / createOffer... */
+    this.pcCollectionRef.onSnapshot(async snapshot => {
+        const data = snapshot.data();
+        await this.setRemoteDescription(this.isCaller, data);
+    });
+
     if (me == this.caller) {
         await this.startOffer();
-    } else {
-        await this.startAnswer();
     }
 }
 
@@ -201,12 +217,16 @@ Connection.prototype.setLocalDescription = async function (isCaller) {
 Connection.prototype.setRemoteDescription = async function (isCaller, data) {
     if (isCaller) {
         if (!this.peerConnection.currentRemoteDescription && data && data.answer) {
+            console.log('Got answer:', data.answer);
             console.log('Got remote description: ', data.answer);
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
         }
     } else {
         if (!this.peerConnection.currentRemoteDescription && data && data.offer) {
+            console.log('Got offer:', data.offer);
+            console.log('Got remote description: ', data.offer);
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            await this.startAnswer();
         }
     }
 }

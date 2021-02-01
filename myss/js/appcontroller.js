@@ -55,7 +55,6 @@ AppController.prototype.init = function() {
 
     this.userCount = 0;
     this.users = [];
-    this.firstUserSnapshot = true;
     this.isHost = false;
     this.db = firebase.firestore();
     this.show_(roomSelectionDiv);
@@ -261,24 +260,18 @@ AppController.prototype.addUser = async function() {
     this.userCollection = this.roomRef.collection('users');
 
     this.userCollection.onSnapshot(async snapshot => {
-        var isCaller;
-        if (this.firstUserSnapshot) { isCaller = true; }
-        else { isCaller = false; }
-        console.log('isCaller set to ' + isCaller)
         snapshot.docChanges().forEach(async change => {
             if (change.type === 'added') {
                 let data = change.doc.data();
                 this.users[this.userCount++] = data.name;
                 console.log(`user Added!! name is : ${data.name}, current users are ${this.userCount}`)
                 if (this.user != data.name) {
-                    await this.call_.addPeerConnection(isCaller, this.user, data.name);
+                    await this.call_.addPeerConnection(/*isCaller, */this.user, data.name);
                 }
             } else if (change.type === 'removed') {
                 /* TBD */
             }
         })
-        this.firstUserSnapshot = false;
-        console.log('firstUserSnapshot set to ' + this.firstUserSnapshot)
     })
 
     this.userRef = this.userCollection.doc(this.user);
