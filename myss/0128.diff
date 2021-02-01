@@ -1,0 +1,231 @@
+diff --git a/index.html b/index.html
+index 0215005..b77a7d5 100644
+--- a/index.html
++++ b/index.html
+@@ -10,13 +10,20 @@
+   <div id="roomInfo"></div>
+   <div id="noticeInfo"></div>
+   <div id="login-div">
+-    <p>Please create a new room, or join with your room number</p> 
++    <p>Please create a new room, or join with your room number</p>
++    <div id="userName-div">
++      <p>Your Name : 
++        <input type="text" id="userName">
++      </p>
++    </div>
+     <div id="room-selection" class="hidden">
+-      <input type="text" id="targetRoom">
+-      <label class="error-label hidden" for="targetRoom" id="targetRoom-label">
+-        RoomNumber should be 9 numerical characters in [0-9]
+-      </label>
+-      <button id="joinButton" disabled>Join Meeting</button>
++      <p>Room Number : 
++        <input type="text" id="targetRoom">
++        <label class="error-label hidden" for="targetRoom" id="targetRoom-label">
++          RoomNumber should be 9 numerical characters in [0-9]
++        </label>
++        <button id="joinButton" disabled>Join Meeting</button>
++      </p>
+     </div>
+     <div>
+       <button id="createButton">Create Random Room</button>
+diff --git a/js/appcontroller.js b/js/appcontroller.js
+index 1a2780c..bca3ffe 100644
+--- a/js/appcontroller.js
++++ b/js/appcontroller.js
+@@ -22,6 +22,7 @@ AppController.prototype.init = function() {
+     this.infoBox_ = new InfoBox();
+     this.call_ = new Call();
+ 
++    this.userName = document.querySelector("#userName");
+     this.createButton = document.querySelector('#createButton');
+     this.targetRoom = document.querySelector('#targetRoom');
+     this.joinButton = document.querySelector('#joinButton');
+@@ -52,6 +53,7 @@ AppController.prototype.init = function() {
+         forEach(input => input.addEventListener('change', this.onRemoteMediaOption.bind(this)));
+     this.denyDialogBtn.addEventListener('click', ()=>this.remoteDialog.close());
+ 
++    this.isCaller = true;
+     this.db = firebase.firestore();
+     this.show_(roomSelectionDiv);
+ }
+@@ -68,18 +70,26 @@ AppController.prototype.createRandomRoom = async function() {
+     var roomNumber = randomNumber(9);
+     console.log(`randomNumber is ${roomNumber}`);
+ 
+-    this.isCaller = true; /* TODO: isCaller setting time */
++    //this.isCaller = false; /* TODO: isCaller setting time */
++    this.isHost = true;
+     this.targetRoom.value = roomNumber;
+     this.checkTargetRoom();
+     this.targetRoom.disabled = true;
+ }
+ 
+ AppController.prototype.joinRoom = async function() {
++    if (this.userName.value.length == 0) {
++        this.user = "noname" + randomNumber(2);
++    } else {
++        this.user = this.userName.value;
++    }
++    console.log('userName is ' + this.user);
++
+     this.roomId = this.targetRoom.value;
+     this.roomRef = await this.db.collection('rooms').doc(this.roomId);
+     const roomSnapshot = await this.roomRef.get();
+ 
+-    if (this.isCaller) {
++    if (this.isHost) {
+         if (roomSnapshot.exists) {
+             console.log(`Room #${this.roomId} is already created. Choose another room number`);
+             this.infoBox_.roomExistErrorMessage(this.roomId);
+@@ -87,6 +97,7 @@ AppController.prototype.joinRoom = async function() {
+             return;
+         }
+         await this.roomRef.set({created: true}); // new room created
++        console.log(`New room created with SDP offer. Room ID: ${this.roomRef.id}`);
+     } else {
+         if (!roomSnapshot.exists) {
+             console.log(`You cannot join this room ${this.roomId} - It's not exists`);
+@@ -136,7 +147,7 @@ AppController.prototype.hangup = async function() {
+     this.joinButton.disabled = false;
+     this.disconnectButton.disabled = true;
+ 
+-    await this.resource_free();
++    //await this.resource_free();
+ 
+     this.hide_(mediaOptionDiv);
+     this.hideMeetingRoom();
+@@ -232,6 +243,28 @@ AppController.prototype.prepareDialog = function(data) {
+     });
+ }
+ 
++AppController.prototype.addUser = async function() {
++    this.userCollection = this.roomRef.collection('users');
++    this.userRef = this.userCollection.doc(this.user);
++    this.userRef.set({name: this.user});
++    var res = await this.userCollection.get();
++    if (res.size == 1) {
++        this.isFirstUser = true;
++        console.log(`users collection size is ${res.size}`)
++    }
++
++    this.userCollection.onSnapshot(snapshot => {
++        snapshot.docChanges().forEach(change => {
++            if (change.type === 'added') {
++                let data = change.doc.data();
++                this.users[this.userCount++] = data.name;
++                console.log(`user Added!! name is : ${data.name}, current users are ${this.userCount}`)
++                this.call_.addPeerConnection(this.user, data.name);
++            }
++        })
++    })
++}
++
+ AppController.prototype.addControlMediaStreamsListener = function() {
+     this.participantsCollection = this.roomRef.collection('participants');
+     this.mediaOptionRef = this.participantsCollection.doc();
+@@ -265,6 +298,7 @@ AppController.prototype.onMeetNow = async function() {
+     this.callerCandidatesCollection = this.roomRef.collection('callerCandidates');
+     this.calleeCandidatesCollection = this.roomRef.collection('calleeCandidates');
+     this.addControlMediaStreamsListener();
++    await this.addUser();
+ 
+     this.call_.onAddCallCandidate = function(isCaller, candidate) {
+         if (isCaller) {
+@@ -274,8 +308,60 @@ AppController.prototype.onMeetNow = async function() {
+         }
+     }.bind(this);
+ 
+-    this.call_.startConnection(this.isCaller);
++    //this.call_.startConnection(this.isCaller);
+ 
++    if (!this.isCaller || this.isFirstUser) {
++        this.call_.startConnection(false);
++        /* it waits the offer and create answer, like*/
++        this.roomRef.onSnapshot(async snapshot => {
++            const data = snapshot.data();
++            if (data && data.offer) {
++                console.log('Got offer:', data.offer, "and create answer!");
++                await this.call_.setRemoteDescription(false, data);
++    
++                const roomWithAnswer = await this.call_.setLocalDescription(false);
++                await this.roomRef.update(roomWithAnswer);
++            }
++        });
++
++        this.callerCandidatesCollection.onSnapshot(snapshot => {
++            snapshot.docChanges().forEach(async change => {
++                if (change.type === 'added') {
++                    let data = change.doc.data();
++                    console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
++                    await this.call_.addIceCandidate(data);
++                }
++            });
++        });
++    } else {
++        const roomSnapshot = await this.roomRef.get();
++        console.log('Got room:', roomSnapshot.exists);
++
++        if (roomSnapshot.exists) {
++            this.call_.startConnection(true);
++            /* it creates offer and waits answer */
++            const roomWithOffer = await this.call_.setLocalDescription(true);
++            await this.roomRef.set(roomWithOffer);
++
++            this.roomRef.onSnapshot(async snapshot => {
++                const data = snapshot.data();
++                await this.call_.setRemoteDescription(true, data);
++            });
++
++            this.calleeCandidatesCollection.onSnapshot(snapshot => {
++                snapshot.docChanges().forEach(async change => {
++                    if (change.type == 'added') {
++                        let data = change.doc.data();
++                        await this.call_.addIceCandidate(data);
++                    }
++                });
++            })
++        } else {
++            this.infoBox_.loginErrorMessage(this.roomId);
++            return;
++        }
++    }
++/*
+     if (this.isCaller) {
+         const roomWithOffer = await this.call_.setLocalDescription(this.isCaller);
+         await this.roomRef.set(roomWithOffer);
+@@ -322,7 +408,7 @@ AppController.prototype.onMeetNow = async function() {
+             return;
+         }
+     }
+-    
++    */
+     this.hide_(previewDiv);
+     this.infoBox_.loginRoomMessage(this.isCaller, this.roomId);
+     this.showMeetingRoom();
+@@ -365,7 +451,8 @@ AppController.prototype.showLoginMenu = function () {
+     this.joinButton.disabled = false;
+     this.targetRoom.disabled = false;
+     this.targetRoom.value = "";
+-    this.isCaller = false;
++    this.isCaller = true;
++    this.isHost = false;
+     console.log("showLoginMenu")
+ }
+ 
+diff --git a/js/call.js b/js/call.js
+index 4bb0db5..d139a68 100644
+--- a/js/call.js
++++ b/js/call.js
+@@ -37,6 +37,11 @@ var Call = function () {
+     this.audioSenders = [];
+ }
+ 
++Call.prototype.addPeerConnection = function(myName, peerName) {
++    this.pcCollection[count] = this.roomRef.collection(`pc${count}`);
++    
++}
++
+ Call.prototype.onConnectDevice = function() {
+     if (this.localStream) {
+         this.localStream.getTracks().forEach(track => { track.stop(); });

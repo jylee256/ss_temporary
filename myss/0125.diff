@@ -1,0 +1,324 @@
+diff --git a/css/main.css b/css/main.css
+index 4d8fba8..29c8dd6 100644
+--- a/css/main.css
++++ b/css/main.css
+@@ -22,7 +22,7 @@ button {
+   margin: 1em 0 1em 0;
+ }
+ 
+-label.error-label {
++.error-label {
+   color: #F44336;
+   font-size: .85em;
+   font-weight: 200;
+diff --git a/index.html b/index.html
+index 6aed007..e67744e 100644
+--- a/index.html
++++ b/index.html
+@@ -14,12 +14,12 @@
+     <div id="room-selection" class="hidden">
+       <input type="text" id="targetRoom">
+       <label class="error-label hidden" for="targetRoom" id="targetRoom-label">
+-        RoomNumber should be 20 characters in [a-zA-Z0-9]
++        RoomNumber should be 9 numerical characters in [0-9]
+       </label>
+       <button id="joinButton" disabled>Join Meeting</button>
+     </div>
+     <div>
+-      <button id="createButton">Create</button>
++      <button id="createButton">Create Random Room</button>
+     </div>
+   </div>
+ 
+@@ -36,7 +36,7 @@
+       <button id="connect-device">Connect to Device</button>
+       <button id="share-screen">Share Screen</button>
+     </div>
+-    <button id="meet-now">Meet Now</button>
++    <button id="meet-now" disabled>Meet Now</button>
+   </div>
+   <div id="media-constraint-div" class="hidden">
+     <div id="user-constraint-div">
+@@ -83,6 +83,7 @@
+   <script src="js/appcontroller.js"></script>
+   <script src="js/call.js"></script>
+   <script src="js/infobox.js"></script>
++  <script src="js/util.js"></script>
+   <script>
+     // Your web app's Firebase configuration
+     // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+diff --git a/js/appcontroller.js b/js/appcontroller.js
+index bb684db..ddd7882 100644
+--- a/js/appcontroller.js
++++ b/js/appcontroller.js
+@@ -36,7 +36,7 @@ AppController.prototype.init = function() {
+     this.userConstraints = document.querySelectorAll('#user-constraint > input');
+     this.displayConstraints = document.querySelectorAll('#display-constraint > input');
+ 
+-    this.createButton.addEventListener('click', this.createRoom.bind(this));
++    this.createButton.addEventListener('click', this.createRandomRoom.bind(this));
+     this.targetRoom.addEventListener('input', this.checkTargetRoom.bind(this));
+     this.joinButton.addEventListener('click', this.joinRoom.bind(this));
+     this.disconnectButton.addEventListener('click', this.hangup.bind(this));
+@@ -61,31 +61,45 @@ AppController.prototype.onVisibilityChange = function() {
+     this.init();
+ }
+ 
+-AppController.prototype.createRoom = async function() {
+-    this.roomRef = await this.db.collection('rooms').doc();
++AppController.prototype.createRandomRoom = async function() {
++    var roomNumber = randomNumber(9);
++    console.log(`randomNumber is ${roomNumber}`);
+ 
+-    this.isCaller = true;
+-    this.createButton.disabled = true;
+-    this.joinButton.disabled = true;
+-    this.disconnectButton.disabled = false;
+-    this.hide_(loginDiv);
+-    this.show_(videosDiv);
+-    this.show_(previewDiv);
+-    this.show_(mediaConstraintDiv);
++    this.isCaller = true; /* TODO: isCaller setting time */
++    this.targetRoom.value = roomNumber;
++    this.checkTargetRoom();
++    this.targetRoom.disabled = true;
+ }
+ 
+ AppController.prototype.joinRoom = async function() {
+     this.roomId = this.targetRoom.value;
+     this.roomRef = await this.db.collection('rooms').doc(this.roomId);
++    const roomSnapshot = await this.roomRef.get();
+ 
+-    this.isCaller = false;
+-    this.createButton.disabled = true;
+-    this.joinButton.disabled = true;
++    if (this.isCaller) {
++        if (roomSnapshot.exists) {
++            console.log(`Room #${this.roomId} is already created. Choose another room number`);
++            this.infoBox_.roomExistErrorMessage(this.roomId);
++            this.showLoginMenu();
++            return;
++        }
++        await this.roomRef.set({created: true}); // new room created
++    } else {
++        if (!roomSnapshot.exists) {
++            console.log(`You cannot join this room ${this.roomId} - It's not exists`);
++            this.infoBox_.loginErrorMessage(this.roomId);
++            this.showLoginMenu();
++            return;
++        }
++    }
++
++    this.infoBox_.resetMessage();
+     this.disconnectButton.disabled = false;
+     this.hide_(loginDiv);
+     this.show_(videosDiv);
+     this.show_(previewDiv);
+     this.show_(mediaConstraintDiv);
++    this.show_(activeDiv);
+ }
+ 
+ AppController.prototype.checkTargetRoom = function() {
+@@ -94,8 +108,8 @@ AppController.prototype.checkTargetRoom = function() {
+     if (roomNumber.length > 0) {
+         this.createButton.disabled = true;
+ 
+-        var re = /^[a-zA-Z0-9]+$/;
+-        var valid = (roomNumber.length == 20) && re.exec(roomNumber);
++        var re = /^[0-9]+$/;
++        var valid = (roomNumber.length == 9) && re.exec(roomNumber);
+ 
+         if (valid) {
+             this.joinButton.disabled = false;
+@@ -110,7 +124,7 @@ AppController.prototype.checkTargetRoom = function() {
+     }
+ }
+ 
+-AppController.prototype.hangup = function() {
++AppController.prototype.hangup = async function() {
+     this.call_.hangup();
+     this.infoBox_.resetMessage();
+ 
+@@ -119,14 +133,19 @@ AppController.prototype.hangup = function() {
+     this.joinButton.disabled = false;
+     this.disconnectButton.disabled = true;
+ 
+-    this.resource_free();
++    await this.resource_free();
+     // this.userConstraints.forEach((input)=>input.disabled=false);
+     // this.displayConstraints.forEach((input)=>input.disabled=false);
+     this.hide_(mediaConstraintDiv);
+     this.hideMeetingRoom();
++    this.showLoginMenu();
+ }
+ 
+-AppController.prototype.callee_free = function () {
++AppController.prototype.callee_free = async function () {
++    if (!this.calleeCandidatesCollection) {
++        return;
++    }
++
+     this.calleeCandidatesCollection.get().then(res => {
+         res.forEach(element => {
+             element.ref.delete();
+@@ -134,11 +153,15 @@ AppController.prototype.callee_free = function () {
+         this.roomRef.update({
+             answer: firebase.firestore.FieldValue.delete()
+         });
++        console.log('callee_free done');
+     });
+-    console.log('callee_free done');
+ }
+ 
+ AppController.prototype.caller_free = function () {
++    if (!this.callerCandidatesCollection) {
++        return;
++    }
++
+     this.callerCandidatesCollection.get().then(res => {
+         res.forEach(element => {
+             element.ref.delete();
+@@ -147,15 +170,16 @@ AppController.prototype.caller_free = function () {
+             offer: firebase.firestore.FieldValue.delete()
+         });
+         this.roomRef.delete();
++        console.log('caller_free done');
+     });
+-    console.log('caller_free done');
+ }
+ 
+ AppController.prototype.resource_free = async function () {
++    var isCaller = this.isCaller;
+     const roomSnapshot = await this.roomRef.get();
+     if (roomSnapshot.exists) {
+         this.callee_free();
+-        if (this.isCaller) {
++        if (isCaller) {
+             this.caller_free();
+         }
+     } else {
+@@ -167,7 +191,7 @@ AppController.prototype.resource_free = async function () {
+ 
+ AppController.prototype.onConnectDevice = async function() {
+     if (await this.call_.onConnectDevice() == true) {
+-        this.connectDeviceButton.disabled = true;
++        this.meetNowButton.disabled = false;
+         // this.userConstraints.forEach(input => input.disabled = true);
+         // this.displayConstraints.forEach(input => input.disabled = false);
+     }
+@@ -175,7 +199,7 @@ AppController.prototype.onConnectDevice = async function() {
+ 
+ AppController.prototype.onShareScreen = async function() {
+     if (await this.call_.onShareScreen() == true) {
+-        this.shareScreenButton.disabled = true;
++        this.meetNowButton.disabled = false;
+         // this.userConstraints.forEach(input => input.disabled = false);
+         // this.displayConstraints.forEach(input => input.disabled = true);
+     }
+@@ -273,6 +297,15 @@ AppController.prototype.showMeetingRoom = function () {
+     this.show_(activeDiv);
+ }
+ 
++AppController.prototype.showLoginMenu = function () {
++    this.createButton.disabled = false;
++    this.joinButton.disabled = false;
++    this.targetRoom.disabled = false;
++    this.targetRoom.value = "";
++    this.isCaller = false;
++    console.log("showLoginMenu")
++}
++
+ AppController.prototype.hide_ = function(element) {
+     element.classList.add('hidden');
+ };
+diff --git a/js/call.js b/js/call.js
+index 07c0971..cef9cb5 100644
+--- a/js/call.js
++++ b/js/call.js
+@@ -40,7 +40,7 @@ Call.prototype.onConnectDevice = function() {
+     if (this.localStream) {
+         this.localStream.getTracks().forEach(track => { track.stop(); });
+     }
+-    navigator.mediaDevices.getUserMedia({video:true, audio:true})
++    return navigator.mediaDevices.getUserMedia({video:true, audio:true})
+         .then(this.gotUserMediaStream.bind(this)).catch((error) => {
+             console.log("[Error] failed to get media, name: " + error.name + ", message: " + error.message);
+             return false;
+@@ -99,6 +99,7 @@ Call.prototype.gotUserMediaStream = function(streams) {
+     this.localStream = streams; // make stream available to console
+     this.localVideo.srcObject = streams;
+     this.remoteVideo.srcObject = this.remoteStream;
++
+     return true;
+ }
+ 
+@@ -180,7 +181,9 @@ Call.prototype.setRemoteDescription = async function (isCaller, data) {
+             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+         }
+     } else {
+-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
++        if (!this.peerConnection.currentRemoteDescription && data && data.offer) {
++            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
++        }
+     }
+ }
+ 
+@@ -213,10 +216,13 @@ Call.prototype.registerPeerConnectionListeners = function() {
+ 
+ Call.prototype.hangup = function() {
+     console.log('Ending call');
+-    const tracks = this.localVideo.srcObject.getTracks();
+-    tracks.forEach(track => {
+-        track.stop();
+-    });
++
++    if (this.localVideo.srcObject) {
++        const tracks = this.localVideo.srcObject.getTracks();
++        tracks.forEach(track => {
++            track.stop();
++        });
++    }
+     if (this.remoteStream && this.remoteStream.getTracks()) {
+         console.log("Stop remote tracks. Size: " + this.remoteStream.getTracks().length);
+         this.remoteStream.getTracks().forEach(track => track.stop());
+diff --git a/js/infobox.js b/js/infobox.js
+index 8109bb1..e39619d 100644
+--- a/js/infobox.js
++++ b/js/infobox.js
+@@ -8,11 +8,15 @@ var InfoBox = function() {
+ }
+ 
+ InfoBox.prototype.resetMessage = function () {
++    this.normal_(this.roomInfo);
++    this.normal_(this.noticeInfo);
+     this.roomInfo.innerHTML = '';
+     this.noticeInfo.innerHTML = '';
+ }
+ 
+ InfoBox.prototype.loginRoomMessage = function (isCaller, roomId) {
++    this.normal_(this.roomInfo);
++
+     if (isCaller) {
+         this.roomInfo.innerHTML = `Current room is ${roomId} - You are a Host!`;
+     } else {
+@@ -22,5 +26,19 @@ InfoBox.prototype.loginRoomMessage = function (isCaller, roomId) {
+ }
+ 
+ InfoBox.prototype.loginErrorMessage = function (roomId) {
++    this.error_(this.roomInfo);
+     this.roomInfo.innerHTML = `You cannot join this room ${roomId} - It's not exists`;
++}
++
++InfoBox.prototype.roomExistErrorMessage = function (roomId) {
++    this.error_(this.roomInfo);
++    this.roomInfo.innerHTML = `Room ${roomId} is already created. Choose another room number`;
++}
++
++InfoBox.prototype.error_ = function(element) {
++    element.classList.add('error-label');
++}
++
++InfoBox.prototype.normal_ = function(element) {
++    element.classList.remove('error-label');
+ }
+\ No newline at end of file

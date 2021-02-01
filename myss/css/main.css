@@ -1,0 +1,85 @@
+:root {
+  --bg:  #333;
+  --text-color: white;
+}
+
+body {
+  font-family: sans-serif;
+  background-color: var(--bg);
+  color: var(--text-color);
+}
+
+video {
+  max-width: 100%;
+  width: 320px;
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  margin: 0.5em 0 0.5em 0;
+}
+
+.error-label {
+  color: #F44336;
+  font-size: .85em;
+  font-weight: 200;
+  margin: 0;
+}
+
+.column {
+  float: left;
+  width: 50%;
+  box-sizing: border-box;
+}
+
+.row:after {
+  display: table;
+  box-sizing: border-box;
+}
+
+h1, h3 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+dialog {
+  background-color: var(--bg);
+  color: var(--text-color);
+  text-align: center;
+  border: none;
+  padding: 2rem;
+  border-radius: 6px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.1), 0 0 10px rgba(0,0,0,0.25);
+  max-width: 90vw;
+}
+
+dialog[open] {
+  animation: appear .15s cubic-bezier(0, 1.8, 1, 1.8);
+}
+
+dialog::backdrop {
+  background: linear-gradient(45deg, rgba(0,143,104,.5), rgba(250,224,66,.5));
+}
+
+dialog .actions {
+  display: flex;
+  justify-content: space-around;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateX(-3rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
