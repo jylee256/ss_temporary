@@ -19,7 +19,7 @@ var Connection = function (me, peer, call) {
 
     this.localStream = call.localStream;
     this.remoteStream = new MediaStream();
-    this.addRemoteStream(this.call_.connectionCnt);
+    this.addRemoteStream(this.call_.connectionCnt, peer);
 
     this.configuration = {
         iceServers: [
@@ -54,10 +54,24 @@ Connection.prototype.initDB = async function (pcName) {
     this.pcCollection = this.roomRef.collection(pcName);
     this.pcCollectionRef = this.pcCollection.doc(pcName);
     await this.pcCollectionRef.set({ caller: this.caller, callee: this.callee });
-    //console.log("initDB " + this.pcName + "set: caller-" + this.caller + " callee-"+this.callee)
 
     this.callerCandidatesCollection = this.pcCollectionRef.collection('callerCandidates');
     this.calleeCandidatesCollection = this.pcCollectionRef.collection('calleeCandidates');
+}
+
+Connection.prototype.deleteDB = async function () {
+    var res = await this.callerCandidatesCollection.get();
+    res.forEach(element => {
+        element.ref.delete();
+    });
+    var res1 = await this.calleeCandidatesCollection.get();
+    res1.forEach(element => {
+        element.ref.delete();
+    });
+    var res2 = await this.pcCollection.get();
+    res2.forEach(element => {
+        element.ref.delete();
+    });
 }
 
 Connection.prototype.addCandidateDB = function (isCaller, candidate) {
@@ -92,7 +106,6 @@ Connection.prototype.initConnection = async function() {
     /* this is triggered at its setRemoteDescription */
     this.peerConnection.addEventListener('track', event => {
         console.log('Got remote track:', event.streams[0]);
-        this.remoteVideo.srcObject = this.remoteStream;
         event.streams[0].getTracks().forEach(track => {
             console.log('Add a track to the remoteStream:', track);
             this.remoteStream.addTrack(track);
@@ -100,17 +113,25 @@ Connection.prototype.initConnection = async function() {
     });
 }
 
-Connection.prototype.addRemoteStream = function(index) {
+Connection.prototype.addRemoteStream = function(index, peer) {
     const videosDiv = document.querySelector('#videos-div');
     var video = document.createElement('video');
+    var div = document.createElement('div');
+    var text = document.createTextNode(peer);
+
+    div.appendChild(text);
 
     video.id = `remotevideo${index}`;
     video.autoplay = true;
     video.playsInline = true;
 
-    videosDiv.appendChild(video);
 
+    videosDiv.append(div);
+    videosDiv.append(video);
+
+    this.remoteVideoNameDiv = div;
     this.remoteVideo = video;
+    this.remoteVideo.srcObject = this.remoteStream;
 }
 
 Connection.prototype.startOffer = async function() {
@@ -123,6 +144,7 @@ Connection.prototype.startOffer = async function() {
         snapshot.docChanges().forEach(async change => {
             if (change.type == 'added') {
                 let data = change.doc.data();
+                console.log(`caller addIceCandidate(calleeCandidates) ${JSON.stringify(data)}`);
                 await this.addIceCandidate(data);
             }
         });
@@ -139,7 +161,8 @@ Connection.prototype.startAnswer = async function() {
         snapshot.docChanges().forEach(async change => {
             if (change.type === 'added') {
                 let data = change.doc.data();
-                console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
+                console.log(`callee addIceCandidate(callerCandidates) ${JSON.stringify(data)}`);
+                //console.log(`Got new remote ICE candidate: ${JSON.stringify(data)}`);
                 await this.addIceCandidate(data);
             }
         });
@@ -147,7 +170,6 @@ Connection.prototype.startAnswer = async function() {
 }
 
 Connection.prototype.startConnection = async function (me) {
-    //console.log("startConnection " + this.pcName + " await...");
     const pcCollectionSnapshot = await this.pcCollectionRef.get();
     const caller = pcCollectionSnapshot.data().caller;
     const callee = pcCollectionSnapshot.data().callee;
@@ -235,7 +257,7 @@ Connection.prototype.addIceCandidate = async function (data) {
     await this.peerConnection.addIceCandidate(new RTCIceCandidate(data));
 }
 
-Connection.prototype.hangup = function () {
+Connection.prototype.hangup = async function () {
     if (this.remoteStream && this.remoteStream.getTracks()) {
         console.log("Stop remote tracks. Size: " + this.remoteStream.getTracks().length);
         this.remoteStream.getTracks().forEach(track => track.stop());
@@ -245,4 +267,9 @@ Connection.prototype.hangup = function () {
         this.peerConnection.close();
     }
     this.remoteVideo.srcObject = null;
+
+    videosDiv.remove(this.remoteVideoNameDiv);
+    videosDiv.remove(this.remoteVideo);
+
+    await this.deleteDB();
 }

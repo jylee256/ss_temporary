@@ -91,7 +91,7 @@ Call.prototype.addPeerConnection = async function (me, peer) {
     await this.pc_[pcIndex].startConnection(me);
 }
 
-Call.prototype.hangup = function() {
+Call.prototype.hangup = async function() {
     console.log('Ending call');
 
     if (this.localVideo.srcObject) {
@@ -104,7 +104,7 @@ Call.prototype.hangup = function() {
     this.localVideo.srcObject = null;
 
     for (var i=0; i<this.connectionCnt; i++) {
-        this.pc_[i].hangup();
-        delete this.pc_[i];
+        await this.pc_[i].hangup();
+        delete this.pc_[i]; /* TBD ?? */
     }
 }

@@ -54,7 +54,6 @@ AppController.prototype.init = function() {
     this.denyDialogBtn.addEventListener('click', ()=>this.remoteDialog.close());
 
     this.userCount = 0;
-    this.users = [];
     this.isHost = false;
     this.db = firebase.firestore();
     this.show_(roomSelectionDiv);
@@ -139,7 +138,9 @@ AppController.prototype.checkTargetRoom = function() {
 }
 
 AppController.prototype.hangup = async function() {
-    this.call_.hangup();
+    await this.call_.hangup();
+    await this.resource_free();
+
     this.infoBox_.resetMessage();
 
     this.shareScreenButton.disabled = false;
@@ -147,75 +148,32 @@ AppController.prototype.hangup = async function() {
     this.joinButton.disabled = false;
     this.disconnectButton.disabled = true;
 
-    //await this.resource_free();
-
     this.hide_(mediaOptionDiv);
     this.hideMeetingRoom();
     this.showLoginMenu();
 }
-/*
-AppController.prototype.callee_free = async function () {
-    if (!this.calleeCandidatesCollection) {
-        return;
-    }
-
-    this.calleeCandidatesCollection.get().then(res => {
-        res.forEach(element => {
-            element.ref.delete();
-        });
-        this.roomRef.update({
-            answer: firebase.firestore.FieldValue.delete()
-        });
-        console.log('callee_free done');
-    });
-}
-
-AppController.prototype.caller_free = function () {
-    if (!this.callerCandidatesCollection) {
-        return;
-    }
-
-    // TBD : it should be fixed later 
-    this.userCollection.get().then(res => {
-        res.forEach(element => {
-            element.ref.delete();
-        });
-    })
-
-    this.participantsCollection.get().then(res => {
-        res.forEach(element => {
-            element.ref.delete();
-        });
-    })
-
-    this.callerCandidatesCollection.get().then(res => {
-        res.forEach(element => {
-            element.ref.delete();
-        });
-        this.roomRef.update({
-            offer: firebase.firestore.FieldValue.delete()
-        });
-        this.roomRef.delete();
-        console.log('caller_free done');
-    });
-}
 
 AppController.prototype.resource_free = async function () {
-    var isCaller = this.isCaller;
-    const roomSnapshot = await this.roomRef.get();
-    if (roomSnapshot.exists) {
-        this.callee_free();
-        if (isCaller) {
-            this.caller_free();
-        }
-    } else {
-        console.log(`room ${this.roomId} already No exist`);
-    }
+    // TBD : it should be fixed later
+    await this.userRef.delete();
+    await this.mediaOptionRef.delete();
+/*
+    var res = await this.userCollection.get();
+    res.forEach(element => {
+        element.ref.delete();
+    });
+
+    var res1 = await this.participantsCollection.get();
+    res1.forEach(element => {
+        element.ref.delete();
+    });
+*/
     if (this.participants != undefined) {
         this.participants.length = 0;
     }
+
     console.log('resource_free done');
-}*/
+}
 
 
 AppController.prototype.onConnectDevice = async function() {
@@ -235,17 +193,17 @@ AppController.prototype.prepareDialog = function(data) {
     let value = false;
     if ('video' in data) {
         target = 'video';
-        if (data.video === true || data.video === "true") {
+        value = data.video === true || data.video === "true";
+        if (value) {
             this.dialogMessage.innerHTML = 'Could you turn camera on, please?';
-            value = true;
         } else {
             this.dialogMessage.innerHTML = 'Could you turn camera off, please?';
         }
     } else {
         target = 'audio';
-        if (data.video === true || data.video === "true") {
+        value = data.audio === true || data.audio === "true";
+        if (value) {
             this.dialogMessage.innerHTML = 'Could you unmute yourself, please?';
-            value = true;
         } else {
             this.dialogMessage.innerHTML = 'Could you mute yourself, please?';
         }
@@ -261,15 +219,19 @@ AppController.prototype.addUser = async function() {
 
     this.userCollection.onSnapshot(async snapshot => {
         snapshot.docChanges().forEach(async change => {
+            let data = change.doc.data();
             if (change.type === 'added') {
-                let data = change.doc.data();
-                this.users[this.userCount++] = data.name;
+                this.userCount++;
                 console.log(`user Added!! name is : ${data.name}, current users are ${this.userCount}`)
                 if (this.user != data.name) {
-                    await this.call_.addPeerConnection(/*isCaller, */this.user, data.name);
+                    await this.call_.addPeerConnection(this.user, data.name);
                 }
             } else if (change.type === 'removed') {
-                /* TBD */
+                this.userCount--;
+                console.log(`user Removed!! name is : ${data.name}, current users are ${this.userCount}`)
+                if (this.userCount == 0) {
+                    await this.roomRef.delete();
+                }
             }
         })
     })
@@ -281,6 +243,12 @@ AppController.prototype.addUser = async function() {
     if (res.size == 1) {
         console.log(`users collection size is ${res.size}`)
     }
+
+    var div = document.createElement('div');
+    var localName = `[ME] ${this.user}`;
+    var text = document.createTextNode(localName);
+    div.appendChild(text);
+    videosDiv.prepend(div);
 }
 
 AppController.prototype.addControlMediaStreamsListener = function() {
@@ -334,7 +302,7 @@ AppController.prototype.onRemoteMediaOption = function(event) {
     let media = event.target.name.split("-")[1];
     option[media] = event.target.value === true ? true : event.target.value == "true";
     this.participants.forEach(id =>
-        this.participantsCollection.doc(id).update(option));
+        this.participantsCollection.doc(id).set(option));
 }
 
 AppController.prototype.hideMeetingRoom = function() {
