@@ -1,0 +1,95 @@
+diff --git a/css/main.css b/css/main.css
+index 0d1fb64..6fe07ae 100644
+--- a/css/main.css
++++ b/css/main.css
+@@ -22,6 +22,11 @@ button {
+   margin: 0.5em 0 0.5em 0;
+ }
+ 
++.grid {
++  display: inline-block;
++  margin: 1 1 1 1;
++}
++
+ .error-label {
+   color: #F44336;
+   font-size: .85em;
+diff --git a/index.html b/index.html
+index 99375e9..94c7155 100644
+--- a/index.html
++++ b/index.html
+@@ -35,7 +35,9 @@
+   </div>
+ 
+   <div id="videos-div" class="hidden">
+-    <video id="localvideo" style="border: solid 2px red;" poster="https://eitrawmaterials.eu/wp-content/uploads/2016/09/person-icon.png" autoplay playsinline muted></video>
++    <div id="localvideo-div" class="grid">
++      <video id="localvideo" style="border: solid 2px red;" poster="https://eitrawmaterials.eu/wp-content/uploads/2016/09/person-icon.png" autoplay playsinline muted></video>
++    </div>
+   </div>
+   <div id="preview-div" class="hidden row">
+     <div id="call-config" class="column">
+diff --git a/js/appcontroller.js b/js/appcontroller.js
+index ec364ba..b6c25dd 100644
+--- a/js/appcontroller.js
++++ b/js/appcontroller.js
+@@ -3,6 +3,7 @@
+ const loginDiv = document.querySelector('#login-div');
+ const activeDiv = document.querySelector('#active-div');
+ const videosDiv = document.querySelector('#videos-div');
++const localvideoDiv = document.querySelector('#localvideo-div');
+ const roomSelectionDiv = document.querySelector('#room-selection');
+ const previewDiv = document.querySelector('#preview-div');
+ const mediaOptionDiv = document.querySelector('#media-option-div');
+@@ -247,11 +248,12 @@ AppController.prototype.addUser = async function() {
+         console.log(`users collection size is ${res.size}`)
+     }
+ 
++
+     var div = document.createElement('div');
+     var localName = `[ME] ${this.user}`;
+     var text = document.createTextNode(localName);
+     div.appendChild(text);
+-    videosDiv.prepend(div);
++    localvideoDiv.prepend(div);
+ }
+ 
+ AppController.prototype.addControlMediaStreamsListener = function() {
+diff --git a/js/connection.js b/js/connection.js
+index d66cc4a..d3bff2d 100644
+--- a/js/connection.js
++++ b/js/connection.js
+@@ -122,11 +122,17 @@ Connection.prototype.addRemoteStream = function(index, peer) {
+     video.autoplay = true;
+     video.playsInline = true;
+ 
++    var remotevideoDiv = document.createElement('div');
++    remotevideoDiv.id = `${video.id}-div`;
++    remotevideoDiv.classList.add('grid');
+ 
+-    videosDiv.append(div);
+-    videosDiv.append(video);
++    videosDiv.append(remotevideoDiv);
+ 
+-    this.remoteVideoNameDiv = div;
++    remotevideoDiv.append(div);
++    remotevideoDiv.append(video);
++
++    this.remoteVideoDiv = remotevideoDiv;
++    //this.remoteVideoNameDiv = div;
+     this.remoteVideo = video;
+     this.remoteVideo.srcObject = this.remoteStream;
+ }
+@@ -266,8 +272,9 @@ Connection.prototype.hangup = async function () {
+     this.remoteVideo.srcObject = null;
+ 
+     const videosDiv = document.querySelector('#videos-div');
+-    videosDiv.removeChild(this.remoteVideoNameDiv);
+-    videosDiv.removeChild(this.remoteVideo);
++    //videosDiv.removeChild(this.remoteVideoNameDiv);
++    //videosDiv.removeChild(this.remoteVideo);
++    videosDiv.removeChild(this.remoteVideoDiv);
+ 
+     await this.deleteDB();
+ }
+\ No newline at end of file
