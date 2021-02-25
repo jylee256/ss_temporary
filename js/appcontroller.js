@@ -238,7 +238,6 @@ AppController.prototype.qrCheckIn = function() {
 
 AppController.prototype.onScanSuccess = function(qrCodeMessage) {
     console.log('qrCodeMessage is: ' + qrCodeMessage);
-    this.html5QrcodeScanner.clear();
 
     this.targetRoom.value = qrCodeMessage;
 
@@ -246,10 +245,15 @@ AppController.prototype.onScanSuccess = function(qrCodeMessage) {
         if (this.joinRoom() == true) {
             this.hide_(qrReaderDiv);
             return ;
+        } else {
+            console.log('joinRomo fail')
         }
+    }else {
+        console.log('check fail')
     }
 
     qrReaderDiv.style.border = 'solid 2px red;';
+    this.html5QrcodeScanner.clear();
 }
 
 AppController.prototype.checkTargetRoom = function() {
