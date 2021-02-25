@@ -1,0 +1,283 @@
+:root {
+  --bg:  #333;
+  --text-color: white;
+}
+
+body {
+  font-family: sans-serif;
+  background-color: var(--bg);
+  color: var(--text-color);
+}
+
+video {
+  max-width: 100%;
+  width: 320px;
+}
+
+.monitor {
+  position: absolute;
+  /*border: solid 1px red;*/
+}
+
+.system-monitor {
+  position: absolute;
+  /*border: solid 1px blue;*/
+}
+
+.hidden {
+  display: none;
+}
+
+button {
+  margin: 0.5em 0 0.5em 0;
+}
+
+.chat-selectbox {
+  text-align: left;
+}
+
+.msg-send-div {
+  display: inline;
+  text-align: left;
+}
+
+.msg-textarea {
+  width: 95%;
+  margin: 1%;
+  position: relative;
+}
+
+.msg-button {
+  /*position:absolute;
+  bottom:10px;
+  right:10px;*/
+}
+
+.grid {
+  display: inline-block;
+  margin: 5px 5px 5px 5px;
+  border: grey 2px solid;
+}
+
+.error-label {
+  color: #F44336;
+  font-size: .85em;
+  font-weight: 200;
+  margin: 0;
+}
+
+.column {
+  float: left;
+  width: 50%;
+  box-sizing: border-box;
+}
+
+.row:after {
+  display: table;
+  box-sizing: border-box;
+}
+
+h1, h3 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+dialog {
+  background-color: var(--bg);
+  color: var(--text-color);
+  text-align: center;
+  border: none;
+  padding: 2rem;
+  border-radius: 6px;
+  box-shadow: 0 0 40px rgba(0,0,0,0.1), 0 0 10px rgba(0,0,0,0.25);
+  max-width: 90vw;
+}
+
+dialog[open] {
+  animation: appear .15s cubic-bezier(0, 1.8, 1, 1.8);
+}
+
+dialog::backdrop {
+  background: linear-gradient(45deg, rgba(0,143,104,.5), rgba(250,224,66,.5));
+}
+
+dialog .actions {
+  display: flex;
+  justify-content: space-around;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateX(-3rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  background-color: #f1f1f1;
+}
+
+li {
+  display: block;
+  color: #000;
+  padding: 8px 16px;
+  text-decoration: none;
+}
+
+li.active {
+  background-color: #4CAF50;
+  color: white;
+}
+
+li:hover:not(.active) {
+  background-color: #555;
+  color: white;
+}
+
+.user-btn {
+  width: 50px;
+  height: 50px;
+  margin: 10px;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+  z-index: 1;
+  background-image: url("people_3.png");
+  background-color: white;
+  background-size: 90%;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: pointer;
+  border-radius: 30%;
+}
+
+.user-btn:hover {
+  box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
+}
+
+.close-btn {
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  right: 0px;
+  top: 0px;
+  z-index: 1;
+  background-image: url("close.png");
+  background-size: 50%;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: pointer;
+}
+
+#userList-div {
+  width: 24.95%;/*150px;*/
+  height: 100%;
+  position: fixed;
+  right: -24.95%;/*-152px;*/
+  top: 0px;
+  z-index: 10;
+  border: 1px solid #c9c9c9;
+  background-color: white;
+  text-align: center;
+
+  transition: All 0.2s ease;
+  -webkit-transition: All 0.2s ease;
+  -moz-transition: All 0.2s ease;
+  -o-transition: All 0.2s ease;
+}
+
+#userList-div.open {
+  right: 0px;
+}
+
+#userList-div h3 {
+  color: black;
+  margin: 10px 0 10px 0;
+  font-weight: bold;
+}
+
+#chat-div {
+  width: 100%;
+  height: 42%;
+  position: absolute;
+  bottom: 0px;
+  border: 1px solid #c9c9c9;
+  background-color: papayawhip
+}
+
+.main {
+  width: 100%;
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown {
+  position: absolute;
+  background-color: #dcdd8d;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+/* Links inside the dropdown */
+.dropdown a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown a:hover {background-color: #ddd}
+
+.loader {
+  margin: 5% auto;
+  height: 30px;
+  width: 30px;
+  border: 3px solid #fff;
+  border-radius: 50em;
+  border-top: 3px solid red;
+  animation: spin 800ms infinite linear;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(359deg); }
+}
+
+.div-blink {
+  -webkit-animation: div-blink 1.0s linear 10;
+}
+
+@keyframes div-blink {
+  0% {background-color:papayawhip;}
+  100% {background-color: rgb(255, 137, 137);}
+}
+
+.icon-blink {
+  -webkit-animation: icon-blink 1.0s linear infinite;
+}
+
+@keyframes icon-blink {
+  0% {
+    box-shadow: 0 0 0px rgba(255, 255, 0, 0.8);
+    background-color: papayawhip
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
+    background-color: rgb(255, 137, 137);
+  }
+}
+
+.qr-div img {
+  width: 200px;
+}

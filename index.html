@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Virtual meetings via SmartScreen</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <h1>Welcome to SS Meeting</h1>
+
+  <div id="option-div" class="hidden">
+    <div class="user-btn" title="participants list"></div>
+    <div id="userList-div">
+      <h3>Participants list</h3>
+      <div class="close-btn"></div>
+      <div style="overflow:auto; height:50%">
+        <ul id="userList">
+        </ul>
+      </div>
+      <div id="chat-div">
+        <h3>Chat</h3>
+        <textarea id="chat-all-msg-textarea" class=msg-textarea rows="10"></textarea>
+        <div class="chat-selectbox">
+          <label for="select" style="color: black; margin-left:0.5em">To: </label>
+          <select id="select" style="width:60%">
+            <option selected>All</option>
+          </select>
+          <button id="chat-msg-send-button" class="msg-button">Send</button>
+        </div>
+        <div class="msg-send-div">
+          <textarea id="chat-input-msg-textarea" class=msg-textarea rows="2" placeholder="Send your message here"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div id="roomInfo"></div>
+    <div id="noticeInfo"></div>
+    <div id="login-div">
+      <p>Please create a new room, or join with your room number</p>
+      <div id="userName-div">
+        <p> Your Name : 
+          <input type="text" id="userName">
+        </p>
+      </div>
+      <div id="room-selection" class="hidden">
+        <p> Room Number :
+          <input type="text" id="targetRoom">
+          <label class="error-label hidden" for="targetRoom" id="targetRoom-label">
+            RoomNumber should be 9 numerical characters in [0-9]
+          </label>
+          <button id="joinButton" disabled>Join Meeting</button>
+        </p>
+        <div class="qr-div">
+          <img src="">
+        </div>
+      </div>
+      <div>
+        <button id="createButton">Create Random Room</button>
+      </div>
+      <div style="width: 500px" id="reader"></div>
+    </div>
+
+    <div id="active-div" class="hidden">
+      <button id="disconnectButton">Disconnect</button>
+      <input type="checkbox" id="enable-monitor" unchecked/>
+      <label for="enable-monitor">enable performance monitor</label>
+    </div>
+
+    <div id="videos-div" class="hidden">
+      <div id="localvideo-div" class="grid" style="border: solid 2px yellow;">
+        <div id="localvideoName" style="color: yellow"></div>
+        <canvas id="localmonitor" class="monitor" width="320" height="210"></canvas>
+        <canvas id="systemmonitor" class="system-monitor" width="320" height="30"></canvas>
+        <video id="localvideo" width="320" height ="240" poster="https://eitrawmaterials.eu/wp-content/uploads/2016/09/person-icon.png" autoplay playsinline muted></video>
+      </div>
+      <div style="display:none;">
+        <img id="sound-image" width="32" height="32"
+             src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Speaker_Icon.svg/600px-Speaker_Icon.svg.png">
+      </div>
+    </div>
+    <div id="preview-div" class="hidden row">
+      <div id="call-config" class="column">
+        <button id="connect-device">Connect to Device</button>
+        <button id="share-screen">Share Screen</button>
+      </div>
+      <div class="column">
+        <button id="meet-now" disabled>Meet Now</button>
+      </div>
+    </div>
+    <div id="errorMsg"></div>
+    <dialog id="remote-dialog">
+      <h3>Hello there! 👋</h3>
+      <p id="dialog-message"></p>
+      <div class="actions">
+        <button id="allow-dialog-btn">Ok!</button>
+        <button id="deny-dialog-btn">Sorry, I can't.</button>
+      </div>
+    </dialog>
+    <dialog id="joinError-dialog">
+      <h3>This Room is already FULL!!</h3>
+      <p>You can't join this room</p>
+      <div class="actions">
+        <button id="return-login-btn">Return</button>
+      </div>
+    </dialog>
+    <dialog id="exit-dialog">
+      <h3 id="exit-message"></h3>
+      <div id="exiting-div" class="loader hidden"></div>
+      <div id="exit-button-div" class="actions">
+        <button id="stop-dialog-btn">Stop Meeting</button>
+        <button id="leave-dialog-btn">Leave Meeting</button>
+        <button id="return-meeting-btn">Cancel</button>
+      </div>
+    </dialog>
+  </div>
+
+  
+  <!-- The core Firebase JS SDK is always required and must be listed first -->
+  <script src="https://www.gstatic.com/firebasejs/8.2.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.2.2/firebase-firestore.js"></script>
+  <!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+  <script src="https://www.gstatic.com/firebasejs/8.2.2/firebase-analytics.js"></script>
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  <script src="lib/html5-qrcode.min.js"></script>
+  <script src="js/monitor.js"></script>
+  <script src="js/detector.js"></script>
+  <script src="js/appcontroller.js"></script>
+  <script src="js/call.js"></script>
+  <script src="js/connection.js"></script>
+  <script src="js/infobox.js"></script>
+  <script src="js/util.js"></script>
+  <script>
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    var firebaseConfig = {
+      apiKey: "AIzaSyCFTwm65JNDtypaQRZDvyUG_DxIwntwN70",
+      authDomain: "ss-meeting.firebaseapp.com",
+      projectId: "ss-meeting",
+      storageBucket: "ss-meeting.appspot.com",
+      messagingSenderId: "888308853335",
+      appId: "1:888308853335:web:ca3cdeeebfe2e675485112",
+      measurementId: "G-ZJZ3RS4VFC"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+
+    var appController;
+    function initialize() {
+      console.log("initialize!!!");
+      appController = new AppController();
+    }
+    initialize();
+  </script>
+  <!--
+  TODO: replace adapter-latest.js
+  -->
+  <!--<script src="/socket.io/socket.io.js"></script> -->
+  <!--<script src="js/main.js"></script> -->
+</body>
+</html>
