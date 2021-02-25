@@ -240,6 +240,7 @@ AppController.prototype.onScanSuccess = function(qrCodeMessage) {
     console.log('qrCodeMessage is: ' + qrCodeMessage);
 
     this.targetRoom.value = qrCodeMessage;
+    console.log('1'+this.targetRoom.value)
 
     if (this.checkTargetRoom() == true) {
         if (this.joinRoom() == true) {
@@ -258,6 +259,9 @@ AppController.prototype.onScanSuccess = function(qrCodeMessage) {
 
 AppController.prototype.checkTargetRoom = function() {
     var roomNumber = this.targetRoom.value;
+    console.log('2'+ this.targetRoom.value);
+    console.log('3'+ roomNumber)
+    console.log('4'+ roomNumber.length)
 
     if (roomNumber.length > 0) {
         this.createButton.disabled = true;
