@@ -40,26 +40,26 @@
     <div id="login-div">
       <p>Please create a new room, or join with your room number</p>
       <div id="userName-div">
-        <p> Your Name : 
-          <input type="text" id="userName">
-        </p>
+        <input type="text" id="userName" placeholder="Name" style="width:300px">
       </div>
       <div id="room-selection" class="hidden">
-        <p> Room Number :
-          <input type="text" id="targetRoom">
+        <div>
+          <input type="text" id="targetRoom" placeholder="Room Number" style="width:300px">
           <label class="error-label hidden" for="targetRoom" id="targetRoom-label">
             RoomNumber should be 9 numerical characters in [0-9]
           </label>
-          <button id="joinButton" disabled>Join Meeting</button>
-        </p>
+        </div>
+        <br>
         <div class="qr-div">
           <img src="">
         </div>
       </div>
       <div>
-        <button id="createButton">Create Random Room</button>
+        <button id="createButton">Create New Room</button>
+        <button id="joinButton" disabled>Join Room</button>
+        <button id="qrJoinButton">QR Check-In</button>
       </div>
-      <div style="width: 500px" id="reader"></div>
+      <div style="width: 500px" id="qr-reader" class="hidden"></div>
     </div>
 
     <div id="active-div" class="hidden">
