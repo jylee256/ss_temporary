@@ -236,47 +236,40 @@ AppController.prototype.qrCheckIn = function() {
     this.show_(qrReaderDiv);
 }
 
-AppController.prototype.onScanSuccess = function(qrCodeMessage) {
+AppController.prototype.onScanSuccess = async function(qrCodeMessage) {
     console.log('qrCodeMessage is: ' + qrCodeMessage);
 
     this.targetRoom.value = qrCodeMessage;
-    console.log('1'+this.targetRoom.value)
 
-    if (this.checkTargetRoom() == true) {
-        if (this.joinRoom() == true) {
+    if (this.checkTargetRoom()) {
+        var joinRoom = await this.joinRoom();
+        if (joinRoom == true) {
             this.hide_(qrReaderDiv);
-            return ;
-        } else {
-            console.log('joinRomo fail')
+            this.html5QrcodeScanner.clear();
+            return;
         }
-    }else {
-        console.log('check fail')
     }
-
-    qrReaderDiv.style.border = 'solid 2px red;';
-    this.html5QrcodeScanner.clear();
 }
 
 AppController.prototype.checkTargetRoom = function() {
     var roomNumber = this.targetRoom.value;
     console.log('2'+ this.targetRoom.value);
     console.log('3'+ roomNumber)
-    console.log('4'+ roomNumber.length)
+    console.log('4 '+ roomNumber.length)
 
     if (roomNumber.length > 0) {
         this.createButton.disabled = true;
 
         var re = /^[0-9]+$/;
-        var valid = (roomNumber.length == 9) && re.exec(roomNumber);
-
-        if (valid) {
+        var validValue = (roomNumber.length == 9) && re.exec(roomNumber);
+        if (validValue) {
             this.joinButton.disabled = false;
             this.hide_(this.targetRoomLabel);
         } else {
             this.joinButton.disabled = true;
             this.show_(this.targetRoomLabel);
         }
-        return valid;
+        return validValue; /* return false or valid Room Number */
     } else {
         this.createButton.disabled = false;
         this.joinButton.disabled = true;
