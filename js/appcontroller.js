@@ -230,7 +230,7 @@ AppController.prototype.joinRoom = async function() {
 }
 
 AppController.prototype.qrCheckIn = function() {
-    this.html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+    this.html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, disableFlip: true });
     this.html5QrcodeScanner.render(this.onScanSuccess.bind(this));
 
     this.show_(qrReaderDiv);
