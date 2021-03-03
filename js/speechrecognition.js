@@ -20,7 +20,7 @@ var Recognition = function() {
         return false;
     }
 
-    this.recognition = new SpeechRecognition();
+    this.recognition = new webkitSpeechRecognition();
 
     this.recognition.continuous = true;
     this.recognition.interimResults = true;
@@ -30,17 +30,17 @@ var Recognition = function() {
     this.ignoreEndProcess = false;
     this.finalTranscript = '';
 
-    this.recognition.addEventListener('onstart', this.onStart.bind(this));
-    this.recognition.addEventListener('onresult', this.onResult.bind(this));
-    this.recognition.addEventListener('onend', this.onEnd.bind(this));
-    this.recognition.addEventListener('onerror', this.onError.bind(this));
+    this.recognition.addEventListener('start', this.onStart.bind(this));
+    this.recognition.addEventListener('result', this.onResult.bind(this));
+    this.recognition.addEventListener('end', this.onEnd.bind(this));
+    this.recognition.addEventListener('error', this.onError.bind(this));
 
     this.start();
 }
 
 Recognition.prototype.start = function() {
     console.log('recognition start!');
-    
+
     if (this.isRecognizing) {
         this.recognition.stop();
         return;
@@ -79,11 +79,11 @@ Recognition.prototype.onResult = function (event) {
         }
     }
 
-    finalTranscript = capitalize(finalTranscript);
-    final_span.innerHTML = linebreak(finalTranscript);
+    this.finalTranscript = capitalize(this.finalTranscript);
+    final_span.innerHTML = linebreak(this.finalTranscript);
     interim_span.innerHTML = linebreak(interimTranscript);
 
-    console.log('finalTranscript', finalTranscript);
+    console.log('finalTranscript', this.finalTranscript);
     console.log('interimTranscript', interimTranscript);
 }
 
