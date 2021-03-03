@@ -10,6 +10,7 @@ const previewDiv = document.querySelector('#preview-div');
 const optionDiv = document.querySelector('#option-div');
 const exitingDiv = document.querySelector('#exiting-div');
 const qrReaderDiv = document.querySelector('#reader');
+const captionDiv = document.querySelector('#caption-div');
 const userUl = document.querySelector("#userList");
 const userSt = document.querySelector('#select');
 const qrImg = document.querySelector('.qr-div img');
@@ -28,6 +29,7 @@ AppController.prototype.init = function() {
 
     this.infoBox_ = new InfoBox();
     this.call_ = new Call(this);
+    this.recognition_ = new Recognition();
     this.maxUsers = 5;
 
     this.userName = document.querySelector("#userName");
@@ -230,7 +232,7 @@ AppController.prototype.joinRoom = async function() {
 }
 
 AppController.prototype.qrCheckIn = function() {
-    this.html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250, disableFlip: true });
+    this.html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
     this.html5QrcodeScanner.render(this.onScanSuccess.bind(this));
 
     this.show_(qrReaderDiv);
@@ -584,6 +586,7 @@ AppController.prototype.showMeetingRoom = function () {
     this.show_(previewDiv);
     this.show_(activeDiv);
     this.show_(optionDiv);
+    this.show_(captionDiv);
 }
 
 AppController.prototype.showLoginMenu = function () {
