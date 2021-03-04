@@ -319,7 +319,7 @@ li:hover:not(.active) {
   text-align: center;
   min-width: 160px;
 }
-#btn-mic span {
+#caption span {
   display: inline-block;
   margin: 1px 0 0 5px;
   width: 10px;
@@ -328,6 +328,6 @@ li:hover:not(.active) {
   background: #bbb;
   border-radius: 50%;
 }
-#btn-mic.on span {
+#caption.on span {
   background: green;
 }

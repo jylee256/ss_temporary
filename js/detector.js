@@ -72,6 +72,7 @@ class SoundDetector extends BaseDetector {
         window.ctx.fillRect(this.xPos, this.padding, this.imgWidth, this.imgHeight);
         window.ctx.globalCompositeOperation = "destination-in";
         window.ctx.globalAlpha = this.data.instant;
+        console.log('instant: '+this.data.instant);
         window.ctx.drawImage(this.img, this.xPos, this.padding, this.imgWidth, this.imgHeight);
         window.ctx.restore();
     }

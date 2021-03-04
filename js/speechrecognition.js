@@ -20,22 +20,22 @@ var Recognition = function() {
         return false;
     }
 
-    this.recognition = new webkitSpeechRecognition();
+    this.recognition = new SpeechRecognition();
 
     this.recognition.continuous = true;
     this.recognition.interimResults = true;
     this.recognition.lang = 'ko-KR';
 
     this.isRecognizing = false;
-    this.ignoreEndProcess = false;
     this.finalTranscript = '';
 
     this.recognition.addEventListener('start', this.onStart.bind(this));
     this.recognition.addEventListener('result', this.onResult.bind(this));
     this.recognition.addEventListener('end', this.onEnd.bind(this));
     this.recognition.addEventListener('error', this.onError.bind(this));
+    this.recognition.addEventListener('audiostart', this.onAudioStart.bind(this));
+    this.recognition.addEventListener('audioend', this.onAudioEnd.bind(this));
 
-    this.start();
 }
 
 Recognition.prototype.start = function() {
@@ -47,16 +47,27 @@ Recognition.prototype.start = function() {
     }
     
     this.recognition.start();
-    this.ignoreEndProcess = false;
   
     this.finalTranscript = '';
     final_span.innerHTML = '';
     interim_span.innerHTML = '';
 }
 
+Recognition.prototype.stop = function() {
+    console.log('recognition stop!');
+
+    if (!this.isRecognizing) {
+        console.log('already stopped');
+        return;
+    }
+
+    this.recognition.stop();
+}
+
 Recognition.prototype.onStart = function () {
     console.log('onstart', arguments);
     this.isRecognizing = true;
+    this.updateCaptionStatus(true);
 }
 
 Recognition.prototype.onResult = function (event) {
@@ -90,24 +101,29 @@ Recognition.prototype.onResult = function (event) {
 Recognition.prototype.onEnd = function () {
     console.log('onend', arguments);
     this.isRecognizing = false;
-  
-    if (this.ignoreEndProcess) {
-        return false;
-    }
-  
-    // DO end process
+
     if (!this.finalTranscript) {
         console.log('empty finalTranscript');
-        return false;
+        //return false;
     }
+
+    this.updateCaptionStatus(false);
 }
 
 Recognition.prototype.onError = function (event) {
     console.log('onerror', event);
   
-    if (event.error.match(/no-speech|audio-capture|not-allowed/)) {
+    /*if (event.error.match(/no-speech|audio-capture|not-allowed/)) {
         this.ignoreEndProcess = true;
-    }
+    }*/
+}
+
+Recognition.prototype.onAudioStart = function() {
+    console.log('onAudioStart');
+}
+
+Recognition.prototype.onAudioEnd = function() {
+    console.log('onAudioEnd');
 }
 
 const FIRST_CHAR = /\S/;
