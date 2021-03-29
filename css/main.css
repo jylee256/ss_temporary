@@ -12,10 +12,6 @@ body {
 video {
   max-width: 100%;
   width: 320px;
-
-  transform: rotateY(180deg);
-  -webkit-transform: rotateY(180deg);
-  -moz-transform: rotateY(180deg);
 }
 
 .monitor {
@@ -170,17 +166,6 @@ li:hover:not(.active) {
   box-shadow: 0 0 10px rgba(255, 255, 0, 0.8);
 }
 
-.qrImage-btn {
-  width: 25px;
-  height: 25px;
-  background-image: url("qrImage.png");
-  background-size: 90%;
-  background-color: rgb(147 30 30);
-  background-repeat: no-repeat;
-  background-position: center;
-  cursor: pointer;
-}
-
 .close-btn {
   width: 50px;
   height: 50px;
@@ -295,43 +280,4 @@ li:hover:not(.active) {
 
 .qr-div img {
   width: 200px;
-}
-
-#caption-div {
-  margin-bottom: 20px;
-  padding: 10px 20px;
-  height: 150px;
-  border: solid 1px #000;
-  border-radius: 6px;
-}
-#caption-div span {
-  line-height: 1.5;
-}
-
-#result {
-  margin-bottom: 20px;
-  padding: 10px 20px;
-  height: 150px;
-  border: solid 1px #000;
-  border-radius: 6px;
-}
-#result span {
-  line-height: 1.5;
-}
-
-#btn-mic {
-  text-align: center;
-  min-width: 160px;
-}
-#caption span {
-  display: inline-block;
-  margin: 1px 0 0 5px;
-  width: 10px;
-  height: 10px;
-  border: solid 1px #fff;
-  background: #bbb;
-  border-radius: 50%;
-}
-#caption.on span {
-  background: green;
 }

@@ -40,26 +40,25 @@
     <div id="login-div">
       <p>Please create a new room, or join with your room number</p>
       <div id="userName-div">
-        <input type="text" id="userName" placeholder="Name" style="width:300px">
+        <p> Your Name : 
+          <input type="text" id="userName">
+        </p>
       </div>
       <div id="room-selection" class="hidden">
-        <div>
-          <input type="text" id="targetRoom" placeholder="Room Number" style="width:300px">
+        <p> Room Number :
+          <input type="text" id="targetRoom">
           <label class="error-label hidden" for="targetRoom" id="targetRoom-label">
             RoomNumber should be 9 numerical characters in [0-9]
           </label>
-          <button id="joinButton" disabled>Join Room</button>
-          <button id="qrJoinButton" class="qrImage-btn">.</button>
-        </div>
-        <br>
-        <div class="qr-div" style="border: solid 1px silver; width:200px; height:200px">
+          <button id="joinButton" disabled>Join Meeting</button>
+        </p>
+        <div class="qr-div">
           <img src="">
         </div>
       </div>
       <div>
-        <button id="createButton">Create New Room</button>
+        <button id="createButton">Create Random Room</button>
       </div>
-      <div style="width: 500px" id="reader" class="hidden"></div>
     </div>
 
     <div id="active-div" class="hidden">
@@ -75,10 +74,6 @@
         <canvas id="systemmonitor" class="system-monitor" width="320" height="30"></canvas>
         <video id="localvideo" width="320" height ="240" poster="https://eitrawmaterials.eu/wp-content/uploads/2016/09/person-icon.png" autoplay playsinline muted></video>
       </div>
-      <div style="display:none;">
-        <img id="sound-image" width="32" height="32"
-             src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Speaker_Icon.svg/600px-Speaker_Icon.svg.png">
-      </div>
     </div>
     <div id="preview-div" class="hidden row">
       <div id="call-config" class="column">
@@ -89,11 +84,6 @@
         <button id="meet-now" disabled>Meet Now</button>
       </div>
     </div>
-    <div id="caption-div">
-      <span id="final_span"></span>
-      <span id="interim_span"></span>
-    </div>
-    <button id="caption"> CC <span></span></button>
     <div id="errorMsg"></div>
     <dialog id="remote-dialog">
       <h3>Hello there! 👋</h3>
@@ -130,16 +120,12 @@
   <script src="https://www.gstatic.com/firebasejs/8.2.2/firebase-analytics.js"></script>
   <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
-  <script src="lib/html5-qrcode.min.js"></script>
   <script src="js/monitor.js"></script>
-  <script src="js/detector.js"></script>
   <script src="js/appcontroller.js"></script>
   <script src="js/call.js"></script>
   <script src="js/connection.js"></script>
   <script src="js/infobox.js"></script>
   <script src="js/util.js"></script>
-  <!--<script src="js/sample.js"></script>-->
-  <script src="js/speechrecognition.js"></script>
   <script>
     // Your web app's Firebase configuration
     // For Firebase JS SDK v7.20.0 and later, measurementId is optional

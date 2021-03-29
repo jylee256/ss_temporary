@@ -9,7 +9,6 @@ var Call = function (appController) {
     this.appController_ = appController;
     this.pc_ = [];
     this.stateListeners_ = [];
-    this.streamListeners_ = [];
 }
 
 Call.prototype.receiveMessage = function(event) {
@@ -37,10 +36,6 @@ Call.prototype.sendChatMessage = function(target, msg) {
 
 Call.prototype.addStateListener = function(listener) {
     this.stateListeners_.push(listener);
-}
-
-Call.prototype.addStreamListener = function(listener) {
-    this.streamListeners_.push(listener);
 }
 
 Call.prototype.onConnectDevice = function() {
@@ -114,9 +109,6 @@ Call.prototype.addPeerConnection = async function (me, peer) {
     let connection = new Connection(me, peer, this);
     this.stateListeners_.forEach(listener => {
         connection.addStateListener(listener);
-    });
-    this.streamListeners_.forEach(listener => {
-        connection.addStreamListener(listener);
     });
     await connection.initConnection();
 

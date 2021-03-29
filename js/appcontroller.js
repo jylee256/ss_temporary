@@ -9,8 +9,6 @@ const roomSelectionDiv = document.querySelector('#room-selection');
 const previewDiv = document.querySelector('#preview-div');
 const optionDiv = document.querySelector('#option-div');
 const exitingDiv = document.querySelector('#exiting-div');
-const qrReaderDiv = document.querySelector('#reader');
-const captionDiv = document.querySelector('#caption-div');
 const userUl = document.querySelector("#userList");
 const userSt = document.querySelector('#select');
 const qrImg = document.querySelector('.qr-div img');
@@ -35,7 +33,6 @@ AppController.prototype.init = function() {
     this.createButton = document.querySelector('#createButton');
     this.targetRoom = document.querySelector('#targetRoom');
     this.joinButton = document.querySelector('#joinButton');
-    this.qrCheckInButton = document.querySelector('#qrJoinButton');
     this.disconnectButton = document.querySelector('#disconnectButton');
     this.connectDeviceButton = document.querySelector('#connect-device');
     this.shareScreenButton = document.querySelector('#share-screen');
@@ -56,12 +53,10 @@ AppController.prototype.init = function() {
     this.leaveButton = document.querySelector('#leave-dialog-btn');
     this.returnButton = document.querySelector('#return-meeting-btn');
     this.enableMonitorCheck = document.querySelector('#enable-monitor');
-    this.captionButton = document.querySelector('#caption');
 
     this.createButton.addEventListener('click', this.createRandomRoom.bind(this));
     this.targetRoom.addEventListener('input', this.checkTargetRoom.bind(this));
     this.joinButton.addEventListener('click', this.joinRoom.bind(this));
-    this.qrCheckInButton.addEventListener('click', this.qrCheckIn.bind(this));
     this.disconnectButton.addEventListener('click', this.disconnectRoom.bind(this));
     this.connectDeviceButton.addEventListener('click', this.onConnectDevice.bind(this));
     this.shareScreenButton.addEventListener('click', this.onShareScreen.bind(this));
@@ -78,7 +73,6 @@ AppController.prototype.init = function() {
     this.returnButton.addEventListener('click', ()=>{
                                                 this.exitDialog.close();
                                                 });
-    this.captionButton.addEventListener('click', this.enableCaption.bind(this));
     this.enableMonitorCheck.addEventListener('change', function() {
         if (this.checked) {
             Monitor.getMonitor().start();
@@ -120,24 +114,12 @@ AppController.prototype.init = function() {
     this.mediaOption = {video: true, audio: true};
     this.userCount = 0;
     this.isHost = false;
-    this.captionOn = false;
     this.db = firebase.firestore();
     this.show_(roomSelectionDiv);
 
     Monitor.getMonitor().addSystemMonitor("systemmonitor", "localvideo");
     this.call_.addStateListener(Monitor.onStateChanged);
-
-    try {
-        if (this.audioContext != undefined) return;
-        let AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.audioContext = new AudioContext();
-        Detector.getDetector(this.audioContext);
-        this.call_.addStreamListener(Detector.onStreamChanged);
-    } catch (error) {
-        alert("Web Audio API not supported, name: " + error.name + ", message: " + error.message);
-    }
 }
-
 
 AppController.prototype.sendChatMessage = async function () {
     if (this.chatInputTextBox.value.length == 0) {
@@ -185,7 +167,6 @@ AppController.prototype.createRandomRoom = async function() {
     this.targetRoom.value = roomNumber;
     if (this.checkTargetRoom()) {
         this.targetRoom.disabled = true;
-        this.qrCheckInButton.disabled = true;
         let imgSrc = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data="+roomNumber;
         qrImg.src = imgSrc;
     }
@@ -209,7 +190,7 @@ AppController.prototype.joinRoom = async function() {
             console.log(`Room #${this.roomId} is already created. Choose another room number`);
             this.infoBox_.roomExistErrorMessage(this.roomId);
             this.showLoginMenu();
-            return false;
+            return;
         }
         await this.roomRef.set({created: true}); // new room created
     } else {
@@ -217,7 +198,7 @@ AppController.prototype.joinRoom = async function() {
             console.log(`You cannot join this room ${this.roomId} - It's not exists`);
             this.infoBox_.loginErrorMessage(this.roomId);
             this.showLoginMenu();
-            return false;
+            return;
         }
     }
 
@@ -228,52 +209,25 @@ AppController.prototype.joinRoom = async function() {
     this.show_(previewDiv);
     this.show_(activeDiv);
     this.infoBox_.loginRoomMessage(this.isHost, this.roomId);
-    Detector.getDetector().start();
-
-    return true;
-}
-
-AppController.prototype.qrCheckIn = function() {
-    this.html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
-    this.html5QrcodeScanner.render(this.onScanSuccess.bind(this));
-
-    this.show_(qrReaderDiv);
-}
-
-AppController.prototype.onScanSuccess = async function(qrCodeMessage) {
-    console.log('qrCodeMessage is: ' + qrCodeMessage);
-
-    this.targetRoom.value = qrCodeMessage;
-
-    if (this.checkTargetRoom()) {
-        var joinRoom = await this.joinRoom();
-        if (joinRoom == true) {
-            this.hide_(qrReaderDiv);
-            this.html5QrcodeScanner.clear();
-            return;
-        }
-    }
 }
 
 AppController.prototype.checkTargetRoom = function() {
     var roomNumber = this.targetRoom.value;
-    console.log('2'+ this.targetRoom.value);
-    console.log('3'+ roomNumber)
-    console.log('4 '+ roomNumber.length)
 
     if (roomNumber.length > 0) {
         this.createButton.disabled = true;
 
         var re = /^[0-9]+$/;
-        var validValue = (roomNumber.length == 9) && re.exec(roomNumber);
-        if (validValue) {
+        var valid = (roomNumber.length == 9) && re.exec(roomNumber);
+
+        if (valid) {
             this.joinButton.disabled = false;
             this.hide_(this.targetRoomLabel);
         } else {
             this.joinButton.disabled = true;
             this.show_(this.targetRoomLabel);
         }
-        return validValue; /* return false or valid Room Number */
+        return valid;
     } else {
         this.createButton.disabled = false;
         this.joinButton.disabled = true;
@@ -345,7 +299,6 @@ AppController.prototype.hangup = async function() {
     this.exitDialog.close();
     this.hideMeetingRoom();
     this.showLoginMenu();
-    Detector.getDetector().stop();
 }
 
 AppController.prototype.resource_free = async function () {
@@ -572,32 +525,6 @@ AppController.prototype.onMeetNow = async function() {
     this.showMeetingRoom();
 }
 
-AppController.prototype.enableCaption = function() {
-    if (!this.recognition_) {
-        this.recognition_ = new Recognition();
-        this.recognition_.updateCaptionStatus = function(status) {
-            if (this.captionOn == status) {
-                console.log('caption status is same with current '
-                            + this.captionOn + " == " + status);
-            } else {
-                this.captionOn = status;
-                if (status == true) {
-                    this.captionButton.classList.add('on');
-                } else {
-                    this.captionButton.classList.remove('on');
-                }
-                console.log('caption status chaged to '+ this.captionOn);
-            }
-        }.bind(this)
-    }
-    
-    if (this.captionOn == true) {
-        this.recognition_.stop();
-    } else {
-        this.recognition_.start();
-    }
-}
-
 AppController.prototype.hideMeetingRoom = function() {
     this.meetNowButton.disabled = false;
     this.show_(loginDiv);
@@ -614,13 +541,11 @@ AppController.prototype.showMeetingRoom = function () {
     this.show_(previewDiv);
     this.show_(activeDiv);
     this.show_(optionDiv);
-    //this.show_(captionDiv);
 }
 
 AppController.prototype.showLoginMenu = function () {
     this.createButton.disabled = false;
     this.joinButton.disabled = false;
-    this.qrCheckInButton.disabled = false;
     this.targetRoom.disabled = false;
     this.targetRoom.value = "";
 
